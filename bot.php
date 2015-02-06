@@ -16,7 +16,6 @@ class MatchesBot {
 			$this->post($sidebar);
 		} else {
 			$matches = $this->sortMatches($matches);
-			//var_dump($matches);
 			$result = $this->parseMatches($matches);
 			$sidebar = $this->loadSidebar($result);
 			echo "<pre>$sidebar</pre>";
