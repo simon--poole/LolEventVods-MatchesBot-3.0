@@ -16,6 +16,7 @@ class MatchesBot {
 			$this->post($sidebar);
 		} else {
 			$matches = $this->sortMatches($matches);
+			//var_dump($matches);
 			$result = $this->parseMatches($matches);
 			$sidebar = $this->loadSidebar($result);
 			echo "<pre>$sidebar</pre>";
@@ -69,7 +70,7 @@ class MatchesBot {
 		return $matches;
 	}
 	private function parseMatches($matches){
-		$result = "| | | | |\n---:|:---:|---|:---:";
+		$result = "| | | |\n:--|:--:|--:";
 		$previous_label = "";
 		$count = 0;
 		$now = new DateTime();
@@ -82,20 +83,24 @@ class MatchesBot {
 				if($match[3]->getTimestamp() < time())
 					continue 1;
 				$interval = $now->diff($match[3]);
-				$time = $interval->format("%dd, %hh, %im");
+				$time = $interval->format("Starting in %dd, %hh, %im");
 			}
+			$time = str_replace(array(" 0d,", " 0h,"), "", $time);
 			if($previous_label != $match[6]){
 				$result .= PHP_EOL;
-				for($i = 0; $i < 3; $i++){
+				for($i = 0; $i < 2; $i++){
 					$result .= "**".$sections[$i]."** |";
 				}
+				$result .= $time;
 			}
 			$previous_label = $match[6];
-			$time = str_replace(array("0d, ", "0h, "), "", $time);
 			if($spoiler)
-				$result .= PHP_EOL."$time |[$match[1]](/spoiler) | vs. | [$match[2]](/spoiler)";
-			else	
-				$result .= PHP_EOL."$time |[](#$match[1]) $match[1] | vs. | $match[2] [](#$match[2])";
+				$result .= PHP_EOL."[$match[1]](/spoiler) | vs. | [$match[2]](/spoiler)";
+			else	{
+				$icon1 = $this->getIcon($match[1]);
+				$icon2 = $this->getIcon($match[2]);
+				$result .= PHP_EOL."$match[1] [](#$icon1)| vs. |[](#$icon2) $match[2]";
+			}
 			if(++$count == $this->limit)
 					break;
 		}
@@ -107,6 +112,7 @@ class MatchesBot {
 		$sidebar = json_decode($this->snoopy->results);
 		$sidebar = $sidebar->data->content_md;
 		$sidebar = str_replace("&gt;", ">", $sidebar);
+		$sidebar = str_replace("&amp;", "&", $sidebar);
 		$sidebar = str_replace(Config::$wiki['template'], $matches, $sidebar);
 		return $sidebar;
 	}
@@ -138,6 +144,10 @@ class MatchesBot {
 		$parameters['uh'] = $this->userhash;
  		$parameters['show_media'] = $data->show_media;
 		$this->snoopy->submit("http://www.reddit.com/api/site_admin?api_type=json", $parameters);
+	}
+	
+	private function getIcon($team){
+		return strtolower($team);
 	}
 	
 	//v Handlers
