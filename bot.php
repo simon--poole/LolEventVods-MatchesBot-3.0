@@ -44,11 +44,15 @@ class MatchesBot {
 			$count = 0;
 			foreach($data->matches as $match){
 				$tournament = $match->tournament->name;
-				$redTeam = $match->contestants->red->acronym;
-				$redLong = $match->contestants->red->name;
-				$blueLong = $match->contestants->blue->name;
-				$redTeam = (!empty($match->contestants->red->acronym)) ? $match->contestants->red->acronym : $this->shortenName($redLong);
-				$blueTeam = (!empty($match->contestants->blue->acronym)) ? $match->contestants->blue->acronym : $this->shortenName($blueLong);
+				if(!empty($match->contestants)){
+					$redLong = $match->contestants->red->name;
+					$blueLong = $match->contestants->blue->name;
+					$redTeam = (!empty($match->contestants->red->acronym)) ? $match->contestants->red->acronym : $this->shortenName($redLong);
+					$blueTeam = (!empty($match->contestants->blue->acronym)) ? $match->contestants->blue->acronym : $this->shortenName($blueLong);
+				} else {
+					$redTeam = "TBD";
+					$blueTeam = "TBD";
+				}
 				$time = ($match->isLive) ? null : new DateTime($match->dateTime);
 				if($match->isFinished == "0")
 					$matches[] = array($tournament,$redTeam,$blueTeam,$time, $redLong, $blueLong, $label);
@@ -76,7 +80,7 @@ class MatchesBot {
 		$now = new DateTime();
 		foreach($matches as $match){
 			$sections = explode(" - ", $match[6]);
-			$spoiler = $this->checkSpoiler($match[6]);
+			$spoiler = $this->checkSpoiler($match[6], $match[1], $match[2]);
 			if(is_null($match[3]))
 				$time = "**LIVE**";
 			else {
@@ -154,7 +158,9 @@ class MatchesBot {
 	private function shortenName($name){
 		return Config::$Teams[$name];
 	}
-	private function checkSpoiler($title){
+	private function checkSpoiler($title, $t1, $t2){
+		if($t1 == "TBD" && $t2 == "TBD")
+			return false;
 		foreach(Config::$Settings['spoilers'] as $spoiler){
 			if(strpos(strtolower($title), strtolower($spoiler)) !== false)
 				return true;
