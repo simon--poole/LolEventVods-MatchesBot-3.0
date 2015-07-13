@@ -99,11 +99,11 @@ class MatchesBot {
 			}
 			$previous_label = $match[6];
 			if($spoiler)
-				$result .= PHP_EOL."[$match[1]](/spoiler) | vs. | [$match[2]](/spoiler)";
+				$result .= PHP_EOL."[$match[2]](/spoiler) | vs. | [$match[1]](/spoiler)";
 			else	{
 				$icon1 = $this->getIcon($match[1]);
 				$icon2 = $this->getIcon($match[2]);
-				$result .= PHP_EOL."$match[1] [](#$icon1)| vs. |[](#$icon2) $match[2]";
+				$result .= PHP_EOL."$match[2] [](#$icon2)| vs. |[](#$icon1) $match[1]";
 			}
 			if(++$count == $this->limit)
 					break;
