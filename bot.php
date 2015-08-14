@@ -4,19 +4,17 @@ class MatchesBot {
 	private $userhash;
 	public function __construct() {
 		require 'config.php';
-		require 'lib/snoopy.php';
-		$this->snoopy = new \Snoopy;
+		require 'lib/httpful.phar';
 		$this->limit = 8;
 	}
 	public function run(){
 		$matches = $this->getMatches();
 		if(is_null($matches)){
-			$sidebar = $this->loadSidebar("No upcoming matches.");
+			$sidebar = $this->loadSidebar("* No upcoming matches.");
 			echo "<pre>$sidebar</pre>";
 			$this->post($sidebar);
 		} else {
 			$matches = $this->sortMatches($matches);
-			//var_dump($matches);
 			$result = $this->parseMatches($matches);
 			$sidebar = $this->loadSidebar($result);
 			echo "<pre>$sidebar</pre>";
@@ -24,10 +22,19 @@ class MatchesBot {
 		}
 	}
 	private function login() {
-			$this->snoopy->submit("http://reddit.com/api/login/".Config::$User['user'], Config::$User);
-			$login = json_decode($this->snoopy->results);
-			$this->snoopy->cookies['reddit_session'] = $login->json->data->cookie;
-			$this->userhash = $login->json->data->modhash;
+			$array = array(
+				"grant_type" => "password",
+				"username" => Config::$User['user'],
+				"password" => Config::$User['password']
+			);
+			$response = \Httpful\Request::post("https://www.reddit.com/api/v1/access_token")
+				->sendsType(\Httpful\Mime::FORM)
+				->expectsJson()
+				->body($array)
+				->authenticateWith(Config::$User['client_id'], Config::$User['client_secret'])
+				->userAgent(Config::$Settings['useragent'])
+				->send();
+			$this->token = $response->body->access_token;
 	}
 	private function getMatches(){
 		$today = date('Y-m-d',strtotime('today'));
@@ -112,42 +119,35 @@ class MatchesBot {
 	}
 	public function loadSidebar($matches) {
 		$this->login();
-		$this->snoopy->fetch("http://www.reddit.com/r/".Config::$Settings['subreddit']."/wiki/".Config::$wiki['page'].".json");
-		$sidebar = json_decode($this->snoopy->results);
-		$sidebar = $sidebar->data->content_md;
-		$sidebar = str_replace("&gt;", ">", $sidebar);
-		$sidebar = str_replace("&amp;", "&", $sidebar);
-		$sidebar = str_replace(Config::$wiki['template'], $matches, $sidebar);
+		$response = \Httpful\Request::get("https://oauth.reddit.com/r/".Config::$Settings['subreddit']."/wiki/sidebar")
+				->expectsJson()
+				->addHeader('Authorization', "bearer $this->token") 
+				->userAgent(Config::$Settings['useragent'])
+				->send();
+		$sidebar = str_replace(Config::$wiki['template'], $matches, $response->body->data->content_md);
 		return $sidebar;
 	}
  
 	protected function post($content) {
-		$this->snoopy->fetch("http://www.reddit.com/r/".Config::$Settings['subreddit']."/about/edit/.json");
-		$about = json_decode($this->snoopy->results);
-		$data = $about->data;
-		$parameters['sr'] = $data->subreddit_id;
-		$parameters['title'] = $data->title;
-		$parameters['public_description'] = $data->public_description;
-		$parameters['lang'] = $data->language;
-		$parameters['type'] = 'restricted';
-		$parameters['link_type'] = 'self';
-		$parameters['wikimode'] = $data->wikimode;
-		$parameters['wiki_edit_karma'] = $data->wiki_edit_karma;
-		$parameters['wiki_edit_age'] = $data->wiki_edit_age;
-		$parameters['allow_top'] = 'on';
-		$parameters['header-title'] = '';
-		$parameters['id'] = '#sr-form';
-		$parameters['r'] = Config::$Settings['subreddit'];
-		$parameters['renderstyle'] = 'html';
-		$parameters['comment_score_hide_mins'] = $data->comment_score_hide_mins;
-		$parameters['public_traffic'] = $data->public_traffic;
-		$parameters['spam_comments'] = $data->spam_comments;
-		$parameters['spam_links'] = $data->spam_links;
-		$parameters['spam_selfposts'] = $data->spam_selfposts;
-		$parameters['description'] = $content;
-		$parameters['uh'] = $this->userhash;
- 		$parameters['show_media'] = $data->show_media;
-		$this->snoopy->submit("http://www.reddit.com/api/site_admin?api_type=json", $parameters);
+		$response = \Httpful\Request::get("https://oauth.reddit.com/r/".Config::$Settings['subreddit']."/about/edit/.json")
+				->expectsJson()
+				->addHeader('Authorization', "bearer $this->token") 
+				->userAgent(Config::$Settings['useragent'])
+				->send();
+		$settings = (array) $response->body->data;
+		$settings['description'] = htmlspecialchars_decode($content);
+		$settings['sr'] = $settings['subreddit_id'];
+		$settings['link_type'] = $settings['content_options'];
+		$settings['type'] = $settings['subreddit_type'];
+		$settings['over_18'] = "false";
+		unset($settings['hide_ads']);
+		$response = \Httpful\Request::post("https://oauth.reddit.com/api/site_admin?api_type=json")
+				->sendsType(\Httpful\Mime::FORM)
+				->expectsJson()
+				->body($settings)
+				->addHeader('Authorization', "bearer $this->token") 
+				->userAgent(Config::$Settings['useragent'])
+				->send();
 	}
 	
 	private function getIcon($team){

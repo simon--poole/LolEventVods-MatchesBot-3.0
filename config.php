@@ -7,15 +7,15 @@ class Config {
 	//Wikipage that bot will access to load sidebar details
 	//Make sure your bot account has access to it
 	static $wiki = array(
-		"page"=>"sidebarbot",
+		"page"=>"sidebar",
 		"template"=>"%%matches%%",
 	);
 	//User account details
-	//These aren't real, don't bother trying them
 	static $User = array(
-		"user"=>'LEVMatchesBot',
-		"passwd"=>"rl0bUf{9EtTCpnU",
-		"api_type"=>"json",
+		"user" => "",
+		"password" => "",
+		"client_id" => "",
+		"client_secret" => "",
 	);
 	//For some odd reason Riot's API sometimes leaves the shortName field empty, so when it does we refer to this array
 	static $Teams = array(
