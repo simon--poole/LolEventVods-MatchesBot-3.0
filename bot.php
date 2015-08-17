@@ -81,12 +81,11 @@ class MatchesBot {
 		return $matches;
 	}
 	private function parseMatches($matches){
-		$result = "| | | |\n:--|:--:|--:";
+		$result = "";
 		$previous_label = "";
 		$count = 0;
 		$now = new DateTime();
 		foreach($matches as $match){
-			$sections = explode(" - ", $match[6]);
 			$spoiler = $this->checkSpoiler($match[6], $match[1], $match[2]);
 			if(is_null($match[3]))
 				$time = "**LIVE**";
@@ -98,19 +97,18 @@ class MatchesBot {
 			}
 			$time = str_replace(array(" 0d,", " 0h,"), "", $time);
 			if($previous_label != $match[6]){
+				if($count != 0) $result .= PHP_EOL;
+				$result .= "* [".$match[6]."](#title)";
 				$result .= PHP_EOL;
-				for($i = 0; $i < 2; $i++){
-					$result .= "**".$sections[$i]."** |";
-				}
-				$result .= $time;
+				$result .= "* [".$time."](#countdown)";
 			}
 			$previous_label = $match[6];
 			if($spoiler)
-				$result .= PHP_EOL."[$match[2]](/spoiler) | vs. | [$match[1]](/spoiler)";
+				$result .= PHP_EOL."* [$match[2]](#spoiler) [](#default) vs [](#default) [$match[1]](#spoiler)";
 			else	{
 				$icon1 = $this->getIcon($match[1]);
 				$icon2 = $this->getIcon($match[2]);
-				$result .= PHP_EOL."$match[2] [](#$icon2)| vs. |[](#$icon1) $match[1]";
+				$result .= PHP_EOL."* [$match[2]](#team) [](#$icon2) vs [](#$icon1) [$match[1]](#team)";
 			}
 			if(++$count == $this->limit)
 					break;
